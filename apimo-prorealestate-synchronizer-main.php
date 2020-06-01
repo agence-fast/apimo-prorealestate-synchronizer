@@ -107,7 +107,6 @@ class ApimoProrealestateSynchronizer
       $properties = $jsonBody->properties;
 
       if (is_array($properties)) {
-        $properties = array_slice($properties, 1, 2);
         foreach ($properties as $property) {
           // Parse the property object
           $data = $this->parseJSONOutput($property, $mappings);
