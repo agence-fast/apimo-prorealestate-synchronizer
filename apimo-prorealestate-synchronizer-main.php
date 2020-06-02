@@ -169,7 +169,7 @@ class ApimoProrealestateSynchronizer
   {
     $data = array(
       'user' => $property->user,
-      'postAuthor'=> $this->mapIdToValue($mappings, 'user_mappings',$property->user->id ),
+      'email' => $property->user->email,
       'updated_at' => $property->updated_at,
       'postTitle' => array(),
       'postContent' => array(),
@@ -257,7 +257,7 @@ class ApimoProrealestateSynchronizer
         $postContent = $title;
       }
     }
-    $postAuthor = $data['postAuthor'];
+    $email = $data['email'];
     $postUpdatedAt = $data['updated_at'];
     $images = $data['images'];
     $customMetaAltTitle = $data['customMetaAltTitle'];
@@ -292,6 +292,14 @@ class ApimoProrealestateSynchronizer
       'post_status' => 'publish',
       'post_author' => $postAuthor
     );
+
+    // Add email based on author
+    $user = get_user_by('email', $email);
+    if($user){
+      $postInformation['post_author'] = $user->ID;
+    }
+
+
 
     // Verifies if the listing does not already exist
     if ($postTitle != '') {

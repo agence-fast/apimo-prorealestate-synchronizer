@@ -1,12 +1,6 @@
 <?php
 
 return [
-  'user_mappings' =>
-    [
-      45567 => 6, #wendy => Elodie
-      45566 => 4, #leslie => Pascale
-      48113 => 3 # Christophe => Laurent
-    ],
   'type_mappings' => [
     1=>'Appartment',
     2=>'Maison',
