@@ -2,7 +2,7 @@
 
 return [
   'type_mappings' => [
-    1=>'Appartment',
+    1=>'Appartement',
     2=>'Maison',
     3=>'Terrain',
     4=> 'Commerce',
