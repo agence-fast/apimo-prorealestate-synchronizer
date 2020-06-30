@@ -46,7 +46,7 @@ class ApimoProrealestateSynchronizer
         );
 
         // For debug only, you can uncomment this line to trigger the event every time the blog is loaded
-        // add_action('init', array($this, 'synchronize'));
+       //  add_action('init', array($this, 'synchronize'));
       }
     }
   }
@@ -297,6 +297,8 @@ class ApimoProrealestateSynchronizer
     $user = get_user_by('email', $email);
     if($user){
       $postInformation['post_author'] = $user->ID;
+    }else{
+      $postInformation['post_author'] = 1;
     }
 
 
@@ -393,9 +395,10 @@ class ApimoProrealestateSynchronizer
       update_post_meta($postId, '_ct_mls', esc_attr(strip_tags($customMetaMLS)));
       update_post_meta($postId, '_ct_latlng', esc_attr(strip_tags($customMetaLatLng)));
       update_post_meta($postId, '_ct_listing_expire', esc_attr(strip_tags($customMetaExpireListing)));
+      update_post_meta($postId, '_ct_brokerage', 0);
+
 
       // Updates custom taxonomies
-
       $term_id = term_exists( $ctPropertySubtype, "property_type", $ctPropertyType ) ?: $ctPropertyType;
       wp_set_post_terms($postId, $term_id, 'property_type', FALSE);
       wp_set_post_terms($postId, $beds, 'beds', FALSE);
