@@ -46,7 +46,7 @@ class ApimoProrealestateSynchronizer
         );
 
       // For debug only, you can uncomment this line to trigger the event every time the blog is loaded
-       // add_action('init', array($this, 'synchronize'));
+      // add_action('init', array($this, 'synchronize'));
       }
     }
   }
@@ -102,6 +102,10 @@ class ApimoProrealestateSynchronizer
 
     // Parses the JSON into an array of properties object
     $jsonBody = json_decode($return['body']);
+
+    // debug for a single property
+    // if (is_object($jsonBody)) {
+    //  $properties = [$jsonBody];
 
     if (is_object($jsonBody) && isset($jsonBody->properties)) {
       $properties = $jsonBody->properties;
@@ -321,10 +325,9 @@ class ApimoProrealestateSynchronizer
       }
       else {
         // Verifies if the property is not to old to be added
-        if (strtotime($postUpdatedAt) >= strtotime('-5 days')) {
-          return;
-        }
-
+        // if (strtotime($postUpdatedAt) >= strtotime('-5 days')) {
+        //   return;
+        // }
 
 
 
@@ -389,12 +392,15 @@ class ApimoProrealestateSynchronizer
         }
 
         // Set the first image as the thumbnail
-        if ($image['rank'] == 1) {
+        // apimo does not begins at 1
+        $positions = implode(',', $imagesIds);
+        $thumbnail_rank  = min($positions);
+
+        if ($image['rank'] == $thumbnail_rank) {
           set_post_thumbnail($postId, $media->ID);
         }
       }
 
-      $positions = implode(',', $imagesIds);
       update_post_meta($postId, '_ct_images_position', $positions);
 
       // Updates custom meta
