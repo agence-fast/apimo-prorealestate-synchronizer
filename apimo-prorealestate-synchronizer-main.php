@@ -45,8 +45,8 @@ class ApimoProrealestateSynchronizer
           array($this, 'synchronize')
         );
 
-        // For debug only, you can uncomment this line to trigger the event every time the blog is loaded
-       //  add_action('init', array($this, 'synchronize'));
+    // For debug only, you can uncomment this line to trigger the event every time the blog is loaded
+     //  add_action('init', array($this, 'synchronize'));
       }
     }
   }
@@ -103,11 +103,16 @@ class ApimoProrealestateSynchronizer
     // Parses the JSON into an array of properties object
     $jsonBody = json_decode($return['body']);
 
+    // debug for a single property
+    //if (is_object($jsonBody)) {
+    //   $properties = [$jsonBody];
+
     if (is_object($jsonBody) && isset($jsonBody->properties)) {
       $properties = $jsonBody->properties;
 
       if (is_array($properties)) {
         foreach ($properties as $property) {
+
           // Parse the property object
           $data = $this->parseJSONOutput($property, $mappings);
 
@@ -169,6 +174,8 @@ class ApimoProrealestateSynchronizer
   {
     $data = array(
       'user' => $property->user,
+      'firstName' => $property->user->firstname,
+      'lastName' => $property->user->lastname,
       'email' => $property->user->email,
       'updated_at' => $property->updated_at,
       'postTitle' => array(),
@@ -193,13 +200,13 @@ class ApimoProrealestateSynchronizer
       'beds' => 0,
       'customTaxBeds' => 0,
       'customTaxBaths' => 0,
-      'ct_ct_status' => '',
+      'ct_status' => 'en-vente',
       'customTaxCity' => $property->city->name,
       'customTaxState' => '',
       'customTaxZip' => $property->city->zipcode,
       'customTaxCountry' => $property->country,
       'customTaxCommunity' => '',
-      'customTaxFeat' => '',
+      'customTaxFeat' => ''
     );
 
     foreach ($property->comments as $comment) {
@@ -232,7 +239,14 @@ class ApimoProrealestateSynchronizer
         'rank' => $picture->rank
       );
     }
-
+    foreach ($property->regulations as $regulation) {
+      if($regulation->type == 1){
+        $data['customGlobalEnergyPerformanceIndex'] = $regulation->value;
+      }
+      if($regulation->type == 2){
+        $data['customRenewableEnergyPerformanceIndex'] = $regulation->value;
+      }
+    }
     return $data;
   }
 
@@ -244,12 +258,14 @@ class ApimoProrealestateSynchronizer
   private function manageListingPost($data)
   {
     // Converts the data for later use
+
     $postTitle = $data['postTitle'][$this->siteLanguage];
     if ($postTitle == '') {
       foreach ($data['postTitle'] as $lang => $title) {
         $postTitle = $title;
       }
     }
+
 
     $postContent = $data['postContent'][$this->siteLanguage];
     if ($postContent == '') {
@@ -258,8 +274,10 @@ class ApimoProrealestateSynchronizer
       }
     }
     $email = $data['email'];
+    $firstName = $data['firstName'];
+    $lastName = $data['lastName'];
     $postUpdatedAt = $data['updated_at'];
-    $images = $data['images'];
+    $images = array_slice($data['images'], 0, 5);
     $customMetaAltTitle = $data['customMetaAltTitle'];
     $ctPrice = str_replace(array('.', ','), '', $data['customMetaPrice']);
     $customMetaPricePrefix = $data['customMetaPricePrefix'];
@@ -271,12 +289,13 @@ class ApimoProrealestateSynchronizer
     $customMetaExpireListing = $data['customMetaExpireListing'];
     $ctPropertyType = $data['ct_property_type'];
     $ctPropertySubtype = $data['ct_property_subtype'];
-
+    $customGlobalEnergyPerformanceIndex = $data['customGlobalEnergyPerformanceIndex'];
+    $customRenewableEnergyPerformanceIndex = $data['customRenewableEnergyPerformanceIndex'];
     $rooms = $data['rooms'];
     $beds = $data['beds'];
     $customTaxBeds = $data['customTaxBeds'];
     $customTaxBaths = $data['customTaxBaths'];
-    $ctCtStatus = $data['ct_ct_status'];
+    $customStatus = $data['ct_status'];
     $customTaxCity = $data['customTaxCity'];
     $customTaxState = $data['customTaxState'];
     $customTaxZip = $data['customTaxZip'];
@@ -301,8 +320,6 @@ class ApimoProrealestateSynchronizer
       $postInformation['post_author'] = 1;
     }
 
-
-
     // Verifies if the listing does not already exist
     if ($postTitle != '') {
       $post = get_page_by_title($postTitle, OBJECT, 'listings');
@@ -313,12 +330,13 @@ class ApimoProrealestateSynchronizer
       }
       else {
         // Verifies if the property is not to old to be added
-        if (strtotime($postUpdatedAt) >= strtotime('-5 days')) {
-          return;
-        }
+        // if (strtotime($postUpdatedAt) >= strtotime('-5 days')) {
+        //   return;
+        // }
 
         $postInformation['ID'] = $post->ID;
         $postId = $post->ID;
+        $postmetas = get_post_meta($post->ID);
 
         // Update post
         wp_update_post($postInformation);
@@ -341,6 +359,7 @@ class ApimoProrealestateSynchronizer
 
       // Updates the image and the featured image with the first given image
       $imagesIds = array();
+      $has_thumnail = false;
 
       foreach ($images as $image) {
         // Tries to retrieve an existing media
@@ -377,17 +396,22 @@ class ApimoProrealestateSynchronizer
         }
 
         // Set the first image as the thumbnail
-        if ($image['rank'] == 1) {
+        // apimo does not begins at 1
+        $positions = implode(',', $imagesIds);
+        $thumbnail_rank  = min($positions);
+
+        if (!$has_thumnail) {
           set_post_thumbnail($postId, $media->ID);
+          $has_thumnail = true;
         }
       }
 
-      $positions = implode(',', $imagesIds);
       update_post_meta($postId, '_ct_images_position', $positions);
 
       // Updates custom meta
       update_post_meta($postId, '_ct_listing_alt_title', esc_attr(strip_tags($customMetaAltTitle)));
       update_post_meta($postId, '_ct_price', esc_attr(strip_tags($ctPrice)));
+      update_post_meta($postId, '_ct_agent_name', esc_attr(strip_tags($firstName." ".$lastName)));
       update_post_meta($postId, '_ct_price_prefix', esc_attr(strip_tags($customMetaPricePrefix)));
       update_post_meta($postId, '_ct_price_postfix', esc_attr(strip_tags($customMetaPricePostfix)));
       update_post_meta($postId, '_ct_sqft', esc_attr(strip_tags($customMetaSqFt)));
@@ -396,6 +420,8 @@ class ApimoProrealestateSynchronizer
       update_post_meta($postId, '_ct_latlng', esc_attr(strip_tags($customMetaLatLng)));
       update_post_meta($postId, '_ct_listing_expire', esc_attr(strip_tags($customMetaExpireListing)));
       update_post_meta($postId, '_ct_brokerage', 0);
+      update_post_meta($postId, '_ct_global_energy_performance_index', esc_attr(strip_tags($customGlobalEnergyPerformanceIndex)));
+      update_post_meta($postId, '_ct_renewable_energy_performance_index', esc_attr(strip_tags($customRenewableEnergyPerformanceIndex)));
 
 
       // Updates custom taxonomies
@@ -403,7 +429,7 @@ class ApimoProrealestateSynchronizer
       wp_set_post_terms($postId, $term_id, 'property_type', FALSE);
       wp_set_post_terms($postId, $beds, 'beds', FALSE);
       wp_set_post_terms($postId, $customTaxBaths, 'baths', FALSE);
-      wp_set_post_terms($postId, $ctCtStatus, 'ct_status', FALSE);
+      wp_set_post_terms($postId, $customStatus, 'ct_status', FALSE);
       wp_set_post_terms($postId, $customTaxState, 'state', FALSE);
       wp_set_post_terms($postId, $customTaxCity, 'city', FALSE);
       wp_set_post_terms($postId, $customTaxZip, 'zipcode', FALSE);
