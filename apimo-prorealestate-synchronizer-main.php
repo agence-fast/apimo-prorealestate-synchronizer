@@ -46,7 +46,7 @@ class ApimoProrealestateSynchronizer
         );
 
     // For debug only, you can uncomment this line to trigger the event every time the blog is loaded
-     //  add_action('init', array($this, 'synchronize'));
+        //add_action('init', array($this, 'synchronize'));
       }
     }
   }
@@ -121,7 +121,7 @@ class ApimoProrealestateSynchronizer
             $this->manageListingPost($data);
           }
         }
-        $this->deleteOldListingPost($properties, $mappings);
+        // $this->deleteOldListingPost($properties, $mappings);
       }
     }
   }
@@ -277,7 +277,8 @@ class ApimoProrealestateSynchronizer
     $firstName = $data['firstName'];
     $lastName = $data['lastName'];
     $postUpdatedAt = $data['updated_at'];
-    $images = array_slice($data['images'], 0, 5);
+    // $images = array_slice($data['images'], 0, 2);
+    $images = $data['images'];
     $customMetaAltTitle = $data['customMetaAltTitle'];
     $ctPrice = str_replace(array('.', ','), '', $data['customMetaPrice']);
     $customMetaPricePrefix = $data['customMetaPricePrefix'];
@@ -327,12 +328,16 @@ class ApimoProrealestateSynchronizer
       if (NULL === $post) {
         // Insert post and retrieve postId
         $postId = wp_insert_post($postInformation);
+
+        // set some terms once for all
+        wp_set_post_terms($postId, $customStatus, 'ct_status', FALSE);
+
       }
       else {
         // Verifies if the property is not to old to be added
-        // if (strtotime($postUpdatedAt) >= strtotime('-5 days')) {
-        //   return;
-        // }
+        if (strtotime($postUpdatedAt) <= strtotime('-5 days')) {
+          return;
+        }
 
         $postInformation['ID'] = $post->ID;
         $postId = $post->ID;
@@ -385,7 +390,7 @@ class ApimoProrealestateSynchronizer
               'ID' => $attachment->ID,
               'post_name' => $postTitle,
               'post_title' => $postTitle,
-              'post_content' => $image['id'],
+              'post_content' => 'APIMO '.$image['id'],
             ));
             $media = $attachment;
           }
@@ -397,8 +402,8 @@ class ApimoProrealestateSynchronizer
 
         // Set the first image as the thumbnail
         // apimo does not begins at 1
-        $positions = implode(',', $imagesIds);
-        $thumbnail_rank  = min($positions);
+        // $positions = implode(',', $imagesIds);
+        // $thumbnail_rank  = min($positions);
 
         if (!$has_thumnail) {
           set_post_thumbnail($postId, $media->ID);
@@ -429,7 +434,6 @@ class ApimoProrealestateSynchronizer
       wp_set_post_terms($postId, $term_id, 'property_type', FALSE);
       wp_set_post_terms($postId, $beds, 'beds', FALSE);
       wp_set_post_terms($postId, $customTaxBaths, 'baths', FALSE);
-      wp_set_post_terms($postId, $customStatus, 'ct_status', FALSE);
       wp_set_post_terms($postId, $customTaxState, 'state', FALSE);
       wp_set_post_terms($postId, $customTaxCity, 'city', FALSE);
       wp_set_post_terms($postId, $customTaxZip, 'zipcode', FALSE);
@@ -498,7 +502,7 @@ class ApimoProrealestateSynchronizer
       'post_type' => 'attachment',
       'posts_per_page' => -1,
       'post_status' => 'any',
-      'content' => $imageId,
+      'content' => 'APIMO '.$imageId,
     );
 
     $medias = ApimoProrealestateSynchronizer_PostsByContent::get($args);
