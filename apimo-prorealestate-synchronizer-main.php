@@ -46,7 +46,7 @@ class ApimoProrealestateSynchronizer
         );
 
     // For debug only, you can uncomment this line to trigger the event every time the blog is loaded
-        add_action('init', array($this, 'synchronize_all'));
+        // add_action('init', array($this, 'synchronize_all'));
       }
     }
   }
