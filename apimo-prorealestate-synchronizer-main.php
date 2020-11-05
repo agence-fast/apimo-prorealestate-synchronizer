@@ -42,11 +42,11 @@ class ApimoProrealestateSynchronizer
       ) {
         add_action(
           'apimo_prorealestate_synchronizer_hourly_event',
-          array($this, 'synchronize')
+          array($this, 'synchronize_all')
         );
 
     // For debug only, you can uncomment this line to trigger the event every time the blog is loaded
-        //add_action('init', array($this, 'synchronize'));
+        add_action('init', array($this, 'synchronize_all'));
       }
     }
   }
@@ -79,13 +79,26 @@ class ApimoProrealestateSynchronizer
    *
    * @access public
    */
-  public function synchronize()
+  public function synchronize_all()
   {
+    $agency_ids = get_option('apimo_prorealestate_synchronizer_settings_options')['apimo_api_agency'];
 
+    $ids = explode(",", $agency_ids);
+    foreach ($ids as $id) {
+      $this->synchronize($id);
+    }
+  }
+  /**
+   * Synchronizes Apimo and Pro Real Estate plugnins estates
+   *
+   * @access public
+   */
+  public function synchronize($agency_id)
+  {
     // Gets the properties
     $return = $this->callApimoAPI(
       'https://api.apimo.pro/agencies/'
-      . get_option('apimo_prorealestate_synchronizer_settings_options')['apimo_api_agency']
+      . $agency_id
       . '/properties',
       'GET'
     );
